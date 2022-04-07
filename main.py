@@ -25,7 +25,6 @@ config = {
     'NICK': os.getenv('NICK'),
     'SERVER': os.getenv('SERVER'),
     'PORT': int(os.getenv('PORT')),
-    'TARGET': os.getenv('TARGET'),
     'CHANNELS': channels
 }
 
