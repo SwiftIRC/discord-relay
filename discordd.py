@@ -12,7 +12,9 @@ logging.basicConfig(level=logging.INFO)
 thread_lock = None
 
 config = None
-client = discord.Client()
+intents = discord.Intents.default()
+intents.message_content = True
+client = discord.Client(intents=intents)
 server = None
 channels = {}
 irc = None
