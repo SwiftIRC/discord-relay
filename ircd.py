@@ -50,6 +50,7 @@ class IRC(irc.bot.SingleServerIRCBot):
                 message = event.arguments[0].strip()
                 message = "**<{:s}>** {:s}".format(
                     re.sub(r"(]|-|\\|[`*_{}[()#+.!])", r'\\\1', event.source.nick), message)
+                message = re.sub(r"\u0002|\u0003(\d\d?(,\d\d)?)?|\u001D|\u0015|\u000F", "", message)
                 self.discord.privmsg(
                     self.config['CHANNELS'][event.target], message)
 
