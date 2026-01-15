@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
+import functools
 import irc.bot
+import irc.client
+import irc.connection
 import re
+import ssl
 
 
 class IRC(irc.bot.SingleServerIRCBot):
@@ -11,15 +15,21 @@ class IRC(irc.bot.SingleServerIRCBot):
     config = None
     connection = None
     discord = None
+    bot = None
 
     def __init__(self, config):
         irc.client.ServerConnection.buffer_class.encoding = "latin-1"
-        irc.bot.SingleServerIRCBot.__init__(self, [
-            (config["SERVER"],
-             config["PORT"])],
-            config["NICK"],
-            config["NICK"] + " Relay")
+        server_address = (config["SERVER"], config["PORT"])
+        server_hostname = "{}:{}".format(server_address[0], server_address[1])
 
+        wrapper = functools.partial(ssl.SSLContext().wrap_socket, server_hostname=server_hostname)
+        factory = irc.connection.Factory(wrapper=wrapper, ipv6=True)
+        self.bot = irc.bot.SingleServerIRCBot.__init__(self,
+                                                  server_list=[server_address],
+                                                  connect_factory=factory,
+                                                  nickname=config["NICK"],
+                                                  realname=config["NICK"] + " Relay",
+                                                  )
         self.config = config
 
     def set_discord(self, discordd):
