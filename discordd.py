@@ -74,7 +74,7 @@ async def on_message(message):
     global irc
 
     # Don't reply to itself
-    if message.author == client.user:
+    if message.author == client.user or message.channel.id not in channels:
         return
 
     with thread_lock:
