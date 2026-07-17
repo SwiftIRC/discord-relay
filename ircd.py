@@ -7,6 +7,8 @@ import irc.connection
 import re
 import ssl
 
+from formatting import irc_to_discord
+
 
 class IRC(irc.bot.SingleServerIRCBot):
     thread_lock = None
@@ -57,17 +59,16 @@ class IRC(irc.bot.SingleServerIRCBot):
     def on_pubmsg(self, connection, event):
         if (event.target in self.config['CHANNELS']):
             with self.thread_lock:
-                message = event.arguments[0].strip()
+                message = irc_to_discord(event.arguments[0].strip())
                 message = "**<{:s}>** {:s}".format(
                     re.sub(r"(]|-|\\|[`*_{}[()#+.!])", r'\\\1', event.source.nick), message)
-                message = re.sub(r"\u0002|\u0003(\d\d?(,\d\d)?)?|\u001D|\u0015|\u000F", "", message)
                 self.discord.privmsg(
                     self.config['CHANNELS'][event.target], message)
 
     def on_action(self, connection, event):
         if (event.target in self.config['CHANNELS']):
             with self.thread_lock:
-                message = event.arguments[0].strip()
+                message = irc_to_discord(event.arguments[0].strip())
                 message = "* {:s} {:s}".format(
                     re.sub(r"(]|-|\\|[`*_{}[()#+.!])", r'\\\1', event.source.nick), message)
                 self.discord.privmsg(

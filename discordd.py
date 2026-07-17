@@ -6,6 +6,7 @@ import concurrent.futures
 from asyncio import futures
 
 from discord import channel
+from formatting import discord_to_irc
 
 logging.basicConfig(level=logging.INFO)
 
@@ -78,7 +79,7 @@ async def on_message(message):
         return
 
     with thread_lock:
-        content = message.clean_content
+        content = discord_to_irc(message.clean_content)
         if len(message.attachments) > 0:
             content += ' ' + message.attachments[0].url
 
