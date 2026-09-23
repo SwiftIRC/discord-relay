@@ -71,7 +71,9 @@ class IRC(irc.bot.SingleServerIRCBot):
 
     def close(self):
         self.running = False
-        self.connection.quit("Adios!")
+        # Between a disconnect and the next reconnect attempt there's nothing to quit
+        if self.connection.is_connected():
+            self.connection.quit("Adios!")
 
     def privmsg(self, target, message):
         self.connection.privmsg(target, message.strip())
@@ -88,8 +90,22 @@ class IRC(irc.bot.SingleServerIRCBot):
         connection.quit("SASL authentication failed")
         os._exit(1)
 
+    def _connect(self):
+        server = self.servers.peek()
+        log.info("Connecting to %s:%s", server.host, server.port)
+        super()._connect()
+
+    def on_error(self, connection, event):
+        # irc puts the ERROR message in target; it carries the real reason, e.g. a ping timeout or ban
+        log.warning("Server error: %s", event.target)
+
+    def on_disconnect(self, connection, event):
+        log.warning("Disconnected from %s: %s; will reconnect",
+                    connection.get_server_name(), " ".join(event.arguments))
+
     def on_welcome(self, connection, event):
         self.connection = connection
+        log.info("Connected to %s as %s", connection.get_server_name(), connection.get_nickname())
 
         connection.join(
             ','.join([channel for channel in self.config['CHANNELS']]))
