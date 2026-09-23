@@ -4,10 +4,24 @@ import functools
 import irc.bot
 import irc.client
 import irc.connection
+import logging
+import os
 import re
 import ssl
 
 from formatting import irc_to_discord
+
+log = logging.getLogger(__name__)
+
+
+def sasl_credentials(config):
+    username = config.get("SASL_USERNAME")
+    password = config.get("SASL_PASSWORD")
+    if not username and not password:
+        return None
+    if not username or not password:
+        raise ValueError("SASL_USERNAME and SASL_PASSWORD must both be set")
+    return username, password
 
 
 class IRC(irc.bot.SingleServerIRCBot):
@@ -22,15 +36,23 @@ class IRC(irc.bot.SingleServerIRCBot):
     def __init__(self, config):
         irc.client.ServerConnection.buffer_class.encoding = "latin-1"
         server_address = (config["SERVER"], config["PORT"])
-        server_hostname = "{}:{}".format(server_address[0], server_address[1])
 
-        wrapper = functools.partial(ssl.SSLContext().wrap_socket, server_hostname=server_hostname)
+        wrapper = functools.partial(ssl.create_default_context().wrap_socket, server_hostname=config["SERVER"])
         factory = irc.connection.Factory(wrapper=wrapper, ipv6=True)
+
+        # With sasl_login set, the library sends the server password via SASL PLAIN instead of PASS
+        sasl = sasl_credentials(config)
+        connect_params = {}
+        password = None
+        if sasl:
+            connect_params["sasl_login"], password = sasl
+
         self.bot = irc.bot.SingleServerIRCBot.__init__(self,
-                                                  server_list=[server_address],
+                                                  server_list=[irc.bot.ServerSpec(*server_address, password)],
                                                   connect_factory=factory,
                                                   nickname=config["NICK"],
                                                   realname=config["NICK"] + " Relay",
+                                                  **connect_params,
                                                   )
         self.config = config
 
@@ -49,6 +71,15 @@ class IRC(irc.bot.SingleServerIRCBot):
 
     def on_nicknameinuse(self, connection, event):
         connection.nick(connection.get_nickname() + "_")
+
+    def on_login_failed(self, connection, event):
+        # Don't run unauthenticated, and don't let the bot's reconnect loop retry bad credentials
+        # irc builds this event with its arguments shifted into target, so check both
+        reason = event.arguments or event.target or []
+        log.error("SASL authentication failed: %s", " ".join(reason))
+        self.running = False
+        connection.quit("SASL authentication failed")
+        os._exit(1)
 
     def on_welcome(self, connection, event):
         self.connection = connection

@@ -14,7 +14,9 @@ config = {
     'NICK': os.getenv('NICK'),
     'SERVER': os.getenv('SERVER'),
     'PORT': int(os.getenv('PORT')),
-    'CHANNELS': json.loads(os.getenv('CHANNELS'))
+    'CHANNELS': json.loads(os.getenv('CHANNELS')),
+    'SASL_USERNAME': os.getenv('SASL_USERNAME'),
+    'SASL_PASSWORD': os.getenv('SASL_PASSWORD'),
 }
 
 thread_lock = threading.Lock()
