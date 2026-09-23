@@ -56,6 +56,13 @@ class IRC(irc.bot.SingleServerIRCBot):
                                                   )
         self.config = config
 
+        # Runs before irc's SASL handler (priority -42), which doesn't match UnrealIRCd's "ACK :sasl "
+        self.connection.add_global_handler("cap", self._strip_cap_arguments, -50)
+
+    @staticmethod
+    def _strip_cap_arguments(connection, event):
+        event.arguments[:] = [argument.strip() for argument in event.arguments]
+
     def set_discord(self, discordd):
         self.discord = discordd
 
